@@ -1,0 +1,8 @@
+FROM magento_mysql_base
+
+RUN (command -v apt-get >/dev/null \
+      && apt-get update && apt-get install -y vim-tiny && apt-get clean && rm -rf /var/lib/apt/lists/*) \
+  || (command -v microdnf >/dev/null \
+      && microdnf install -y vim-minimal && microdnf clean all)
+
+EXPOSE 3306

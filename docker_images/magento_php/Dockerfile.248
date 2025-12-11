@@ -1,0 +1,3 @@
+FROM magento_php83_frontend
+
+COPY ./magento /var/www/magento

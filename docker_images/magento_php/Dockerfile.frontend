@@ -1,0 +1,44 @@
+# Dockerfile.frontend
+FROM magento_php83_dev
+
+# ------------------------------
+# Arguments and environment vars
+# ------------------------------
+ARG GRUNT_ENABLED=false
+
+ENV GRUNT_ENABLED=${GRUNT_ENABLED}
+
+WORKDIR /var/www/magento
+
+# ------------------------------
+# Install Node.js, Grunt, Yarn
+# ------------------------------
+RUN if [ "$GRUNT_ENABLED" = "true" ]; then \
+      echo "🔧 Installing Node.js, Grunt, and Yarn for frontend build..." >&2 && \
+      curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+      apt-get install -y nodejs && \
+      npm install -g grunt-cli yarn && \
+      npm cache clean --force ; \
+    else \
+      echo "🚫 Skipping frontend tooling installation (GRUNT_ENABLED=$GRUNT_ENABLED)" >&2 ; \
+    fi
+
+# ------------------------------
+# Copy Grunt configuration files
+# ------------------------------
+COPY development/grunt/ /var/www/magento/
+
+# ------------------------------
+# Install NPM dependencies
+# ------------------------------
+RUN if [ "$GRUNT_ENABLED" = "true" ]; then \
+      echo "📦 Running npm install inside /var/www/magento..." >&2 && \
+      cd /var/www/magento && npm install ; \
+    else \
+      echo "🚫 Skipping npm install (GRUNT_ENABLED=$GRUNT_ENABLED)" >&2 ; \
+    fi
+
+# ------------------------------
+# Final setup
+# ------------------------------
+CMD ["php-fpm"]

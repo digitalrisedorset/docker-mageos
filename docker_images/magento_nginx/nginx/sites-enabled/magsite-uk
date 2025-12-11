@@ -1,0 +1,21 @@
+server {
+    listen 80;
+    server_name mageos-docker.magsite.co.uk;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name mageos-docker.magsite.co.uk;
+
+    ssl_certificate     /etc/nginx/ssl/magsite.uk.crt;
+    ssl_certificate_key /etc/nginx/ssl/magsite.uk.key;
+
+    set $MAGE_RUN_TYPE store;
+    set $MAGE_RUN_CODE default;
+    set $MAGE_ROOT /var/www/magento;
+    set $MAGE_MODE developer;
+
+    include snippets/magento.conf;
+}
+

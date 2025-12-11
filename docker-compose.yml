@@ -1,0 +1,137 @@
+services:
+  nginx:
+    build: ./docker_images/magento_nginx
+    container_name: mage-os_nginx
+    ports:
+      - "${NGINX_PORT}:80"
+      - "${NGINX_SECURE_PORT}:443"
+    volumes:
+      - ./docker_images/magento_nginx/nginx:/etc/nginx
+      - ./magento:/var/www/magento
+    depends_on:
+      - php
+    networks:
+      - mageos_network
+
+  php:
+    build:
+      context: .
+      dockerfile: ./docker_images/magento_php/Dockerfile.248
+    container_name: mageos_php
+    env_file:
+      - .env
+    volumes:
+      - ./development/php/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+      - ./vault/env.php.template:/docker-entrypoint-initdb.d/env.php.template
+      - ./docker_images/magento_php/init-env.sh:/docker-entrypoint-initdb.d/init-env.sh
+      - ./config/php/php.ini:/usr/local/etc/php/php.ini:ro
+      - ./vault/auth.json:/var/www/magento/auth.json
+      - ./magento:/var/www/magento
+      - ./magento/var:/var/www/magento/var
+    depends_on:
+      - mysql
+    ports:
+      - "${PHP_FPM_PORT}:9000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - mageos_network
+
+  cron:
+    build:
+      context: .
+      dockerfile: ./docker_images/magento_php_cron/Dockerfile
+    container_name: mageos_cron
+    restart: unless-stopped
+    depends_on:
+      - php
+      - mysql
+    volumes:
+      - ./magento:/var/www/magsite
+    environment:
+      - MAGENTO_ROOT=/var/www/magsite
+      - CRON_INTERVAL=60
+    networks:
+      - mageos_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mageos_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${QUEUE_PORT}:5672"
+      - "${QUEUE_UI_PORT}:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: magento
+      RABBITMQ_DEFAULT_PASS: magento
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - mageos_network
+
+  mysql:
+    build:
+      context: .
+      dockerfile: ./docker_images/magento_mysql/Dockerfile.dev
+    container_name: mageos_mysql
+    env_file:
+      - .env
+    volumes:
+      - ./vault/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+      - ./config/mysql/conf.d/custom.cnf:/etc/mysql/conf.d/custom.cnf
+      - db_data:/var/lib/mysql
+    ports:
+      - "${MYSQL_PORT}:3306"
+    networks:
+      - mageos_network
+
+  redis:
+    build: ./docker_images/magento_redis
+    container_name: mageos_redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mageos_network
+
+  opensearch:
+    build: ./docker_images/magento_opensearch
+    container_name: mageos_opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - DISABLE_SECURITY_PLUGIN=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    ports:
+      - "${OS_PORT}:9200"
+    networks:
+      - mageos_network
+
+  mailhog:
+    build: ./docker_images/magento_mailhog
+    container_name: mageos_mailhog
+    ports:
+      - "${MAIL_UI_PORT}:8025"
+      - "${MAIL_PORT}:1025"
+    volumes:
+      - mailhog_data:/maildir
+    networks:
+      - mageos_network
+
+volumes:
+  db_data:
+  opensearch_data:
+  rabbitmq_data:
+  mailhog_data:
+  redis_data:
+
+networks:
+  mageos_network:
+    name: mageos_network

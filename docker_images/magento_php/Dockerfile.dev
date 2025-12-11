@@ -1,0 +1,32 @@
+# Dockerfile.dev
+FROM magento_php83_base
+
+# Accept build-time flag
+ARG DEVELOPER=false
+ENV DEVELOPER=${DEVELOPER}
+
+RUN apt-get update && apt-get install -y \
+      vim less htop curl iputils-ping net-tools telnet netcat-traditional \
+      && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN if [ "$DEVELOPER" = "true" ]; then \
+      echo "🧠 Installing Xdebug..." && \
+      pecl install xdebug && docker-php-ext-enable xdebug ; \
+    else \
+      echo "🚫 Skipping Xdebug installation (DEVELOPER=$DEVELOPER)" ; \
+    fi
+
+# Install mhsendmail for Mailhog
+RUN curl -sSL https://github.com/mailhog/mhsendmail/releases/download/v0.2.0/mhsendmail_linux_amd64 \
+      -o /usr/local/bin/mhsendmail && \
+    chmod +x /usr/local/bin/mhsendmail && \
+    echo 'sendmail_path="/usr/local/bin/mhsendmail --smtp-addr=mailhog:1025"' > /usr/local/etc/php/conf.d/mailhog.ini
+
+WORKDIR /var/www/magento
+
+ENTRYPOINT ["/docker-entrypoint-initdb.d/init-env.sh"]
+
+# ------------------------------
+# Final setup
+# ------------------------------
+CMD ["php-fpm"]
