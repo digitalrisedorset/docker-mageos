@@ -1,7 +1,7 @@
 services:
   nginx:
     build: ./docker_images/magento_nginx
-    container_name: mage-os_nginx
+    container_name: mageos_nginx
     ports:
       - "${NGINX_PORT}:80"
       - "${NGINX_SECURE_PORT}:443"

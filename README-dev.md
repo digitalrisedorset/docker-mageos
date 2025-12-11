@@ -24,11 +24,14 @@ sudo chown -R :www-data magento
 ```
 
 ### create ssl certifcate
+For each store we can add self-signed certificate
+```bash
 openssl req -x509 -nodes -newkey rsa:2048 \
--keyout magsite.local.key \
--out magsite.local.crt \
+-keyout magsite.fr.key \
+-out magsite.fr.crt \
 -days 365 \
--subj "/CN=mageos-docker.magsite.co.uk"
+-subj "/CN=mageos-docker.magsite.fr"
+```
 
 ### Create docker images 
 ```bash
